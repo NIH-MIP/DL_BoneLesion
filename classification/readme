@@ -1,1 +1,30 @@
+# DL 3D Class
+ This set of scripts is for handling the preprocessing, training, and inference of a classification script for suspicious bone lesions on staging Computed Tomography (CT) scans
+
+# Python Module Requirements
+pandas == 1.4.3
+scipy == 1.9.2
+numpy ==  1.23.1
+connected-components-3d == 3.10.1
+nibabel == 4.0.1
+monai == 0.8.0
+
+# cube_preprocess.py
+This script reads in a csv file containing a column dedicated to the full CT path (name=CT_path) and the full lesion mask path (name=mask_path).
+Following reading the csv file, the script will then preprocess all CT volumes and masks into thousands of cubes. Each spatial ROI undergoes 5 interations of random 3d elastic transformations.
+Cubes are saved to the 'cube_save_dir' with the naming convention: "TrainCube_0_Dilation_5_Class_1_VoxelNum_5143_Iteration_3_CubeNum_50_.nii.gz'. The class for each cube is defined by the label present in each ROI.
+INPUTS: csv_file with paths
+OUTPUTS: preprocessed cubes
+
+# train_final.py
+This script globs the 'cube_save_dir' and will train a DenseNet121 classifier
+INPUTS: cube_directory
+OUTPUTS: model training + model weights
+
+# inference_final.py
+This script classifys on raw CT and lesion mask
+The input requirements are also a data dictionary pointing to each image path and label path, as well as model weights.
+INPUTS: data dictionary with paths, model weights
+OUTPUTS: lesion mask with classifications
+
 
