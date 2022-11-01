@@ -47,8 +47,5 @@ The model needs to be used with NVIDIA hardware and software. For hardware, the 
 
 **The Clara pre-trained models are for developmental purposes only and cannot be used directly for clinical procedures.**
 
-# License
-[End User License Agreement](https://developer.nvidia.com/clara-train-eula) is included with the product. Licenses are also available along with the model application zip file. By pulling and using the Clara Train SDK container and downloading models, you accept the terms and conditions of these licenses.
-
 # References
 [1] Milletari F, Navab N, Ahmadi S-A. V-Net: Fully Convolutional Neural Networks for Volumetric Medical Image Segmentation. 2016 Fourth International Conference on 3D Vision (3DV). 2016. p. 565–571. doi: 10.1109/3DV.2016.79
