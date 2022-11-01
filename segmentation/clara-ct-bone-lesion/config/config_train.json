@@ -1,0 +1,511 @@
+{
+    "in_channels": 1,
+    "out_classes": 2,
+    "epochs": 1260,
+    "num_interval_per_valid": 1,
+    "learning_rate": 0.0002,
+    "multi_gpu": false,
+    "amp": true,
+    "roi_x": 128,
+    "roi_y": 128,
+    "roi_z": 128,
+    "cudnn_benchmark": false,
+    "dont_load_ckpt_model": true,
+    "network_summary": {
+        "network": "@model",
+        "input_size": [
+            2,
+            "{in_channels}",
+            "{roi_x}",
+            "{roi_y}",
+            "{roi_z}"
+        ],
+        "depth": 10
+    },
+    "train": {
+        "loss": {
+            "name": "DiceCELoss",
+            "args": {
+                "jaccard": false,
+                "to_onehot_y": true,
+                "softmax": true,
+                "squared_pred": true
+            }
+        },
+        "optimizer": {
+            "name": "Adam",
+            "args": {
+                "params": "#@model.parameters()",
+                "lr": "{learning_rate}"
+            }
+        },
+        "lr_scheduler": {
+            "name": "StepLR",
+            "args": {
+                "optimizer": "@optimizer",
+                "step_size": 5000,
+                "gamma": 0.1
+            }
+        },
+        "model": {
+            "name": "SegResNet",
+            "args": {
+                "spatial_dims": 3,
+                "in_channels": "{in_channels}",
+                "out_channels": "{out_classes}",
+                "init_filters": 32,
+                "dropout_prob": 0.1,
+                "blocks_down": [
+                    1,
+                    2,
+                    2,
+                    4
+                ],
+                "blocks_up": [
+                    1,
+                    1,
+                    1
+                ]
+            }
+        },
+        "pre_transforms": [
+            {
+                "name": "LoadImaged",
+                "args": {
+                    "keys": [
+                        "image",
+                        "label"
+                    ]
+                }
+            },
+            {
+                "name": "Lambdad",
+                "args": {
+                    "keys": [
+                        "label"
+                    ],
+                    "func": "lambda x: (x.astype(np.float16) > 0.0).astype(np.float16)",
+                    "overwrite": true,
+                    "allow_missing_keys": false
+                }
+            },
+            {
+                "name": "EnsureChannelFirstd",
+                "args": {
+                    "keys": [
+                        "image",
+                        "label"
+                    ]
+                }
+            },
+            {
+                "name": "Orientationd",
+                "args": {
+                    "keys": [
+                        "image",
+                        "label"
+                    ],
+                    "axcodes": "RAS"
+                }
+            },
+            {
+                "name": "Spacingd",
+                "args": {
+                    "keys": [
+                        "image",
+                        "label"
+                    ],
+                    "pixdim": [
+                        1.0,
+                        1.0,
+                        1.0
+                    ],
+                    "mode": [
+                        "bilinear",
+                        "nearest"
+                    ],
+                    "align_corners": [
+                        true,
+                        true
+                    ]
+                }
+            },
+            {
+                "name": "ScaleIntensityRanged",
+                "args": {
+                    "keys": "image",
+                    "a_min": -980,
+                    "a_max": 2620,
+                    "b_min": 0,
+                    "b_max": 1,
+                    "clip": true
+                }
+            },
+            {
+                "name": "CropForegroundd",
+                "args": {
+                    "keys": [
+                        "image",
+                        "label"
+                    ],
+                    "source_key": "image"
+                }
+            },
+            {
+                "name": "SpatialPadd",
+                "args": {
+                    "keys": [
+                        "image",
+                        "label"
+                    ],
+                    "spatial_size": [
+                        128,
+                        128,
+                        128
+                    ],
+                    "mode": [
+                        "minimum",
+                        "constant"
+                    ]
+                }
+            },
+            {
+                "name": "RandCropByPosNegLabeld",
+                "args": {
+                    "keys": [
+                        "image",
+                        "label"
+                    ],
+                    "label_key": "label",
+                    "spatial_size": [
+                        128,
+                        128,
+                        128
+                    ],
+                    "pos": 1,
+                    "neg": 1,
+                    "num_samples": 2,
+                    "image_key": "image",
+                    "image_threshold": 0
+                }
+            },
+            {
+                "name": "RandShiftIntensityd",
+                "args": {
+                    "keys": "image",
+                    "offsets": 0.1,
+                    "prob": 0.5
+                }
+            },
+            {
+                "name": "RandFlipd",
+                "args": {
+                    "keys": [
+                        "image",
+                        "label"
+                    ],
+                    "spatial_axis": [
+                        0
+                    ],
+                    "prob": 0.5
+                }
+            },
+            {
+                "name": "RandFlipd",
+                "args": {
+                    "keys": [
+                        "image",
+                        "label"
+                    ],
+                    "spatial_axis": [
+                        1
+                    ],
+                    "prob": 0.5
+                }
+            },
+            {
+                "name": "RandFlipd",
+                "args": {
+                    "keys": [
+                        "image",
+                        "label"
+                    ],
+                    "spatial_axis": [
+                        2
+                    ],
+                    "prob": 0.5
+                }
+            },
+            {
+                "name": "ToTensord",
+                "args": {
+                    "keys": [
+                        "image",
+                        "label"
+                    ]
+                }
+            }
+        ],
+        "dataset": {
+            "name": "CacheDataset",
+            "data_list_file_path": "{DATASET_JSON}",
+            "data_file_base_dir": "{DATA_ROOT}",
+            "data_list_key": "{TRAIN_DATALIST_KEY}",
+            "args": {
+                "transform": "@pre_transforms",
+                "cache_rate": 1,
+                "num_workers": 4
+            }
+        },
+        "dataloader": {
+            "name": "DataLoader",
+            "args": {
+                "dataset": "@dataset",
+                "batch_size": 2,
+                "shuffle": true,
+                "num_workers": 4
+            }
+        },
+        "inferer": {
+            "name": "SimpleInferer"
+        },
+        "handlers": [
+            {
+                "name": "CheckpointLoader",
+                "disabled": "{dont_load_ckpt_model}",
+                "args": {
+                    "load_path": "{MMAR_CKPT}",
+                    "load_dict": {
+                        "model": "@model"
+                    }
+                }
+            },
+            {
+                "name": "LrScheduleHandler",
+                "args": {
+                    "lr_scheduler": "@lr_scheduler",
+                    "print_lr": true
+                }
+            },
+            {
+                "name": "ValidationHandler",
+                "args": {
+                    "validator": "@evaluator",
+                    "epoch_level": true,
+                    "interval": "{num_interval_per_valid}"
+                }
+            },
+            {
+                "name": "CheckpointSaver",
+                "rank": 0,
+                "args": {
+                    "save_dir": "{MMAR_CKPT_DIR}",
+                    "save_dict": {
+                        "model": "@model",
+                        "optimizer": "@optimizer",
+                        "lr_scheduler": "@lr_scheduler",
+                        "train_conf": "@conf"
+                    },
+                    "save_final": true,
+                    "save_interval": 400
+                }
+            },
+            {
+                "name": "StatsHandler",
+                "rank": 0,
+                "args": {
+                    "tag_name": "train_loss",
+                    "output_transform": "#monai.handlers.from_engine(['loss'], first=True)"
+                }
+            },
+            {
+                "name": "TensorBoardStatsHandler",
+                "rank": 0,
+                "args": {
+                    "log_dir": "{MMAR_CKPT_DIR}",
+                    "tag_name": "train_loss",
+                    "output_transform": "#monai.handlers.from_engine(['loss'], first=True)"
+                }
+            }
+        ],
+        "post_transforms": [
+            {
+                "name": "Activationsd",
+                "args": {
+                    "keys": "pred",
+                    "softmax": true
+                }
+            },
+            {
+                "name": "AsDiscreted",
+                "args": {
+                    "keys": [
+                        "pred",
+                        "label"
+                    ],
+                    "argmax": [
+                        true,
+                        false
+                    ],
+                    "to_onehot": true,
+                    "n_classes": "{out_classes}"
+                }
+            }
+        ],
+        "key_metric": {
+            "name": "Accuracy",
+            "log_label": "train_acc",
+            "args": {
+                "output_transform": "#monai.handlers.from_engine(['pred', 'label'])"
+            }
+        },
+        "trainer": {
+            "name": "SupervisedTrainer",
+            "args": {
+                "max_epochs": "{epochs}",
+                "device": "cuda",
+                "train_data_loader": "@dataloader",
+                "network": "@model",
+                "loss_function": "@loss",
+                "optimizer": "@optimizer",
+                "inferer": "@inferer",
+                "postprocessing": "@post_transforms",
+                "key_train_metric": "@key_metric",
+                "train_handlers": "@handlers",
+                "amp": "{amp}"
+            }
+        }
+    },
+    "validate": {
+        "pre_transforms": [
+            {
+                "ref": "LoadImaged"
+            },
+            {
+                "ref": "Lambdad"
+            },
+            {
+                "ref": "EnsureChannelFirstd"
+            },
+            {
+                "ref": "Orientationd"
+            },
+            {
+                "ref": "Spacingd"
+            },
+            {
+                "ref": "ScaleIntensityRanged"
+            },
+            {
+                "ref": "CropForegroundd"
+            },
+            {
+                "ref": "SpatialPadd"
+            },
+            {
+                "ref": "ToTensord"
+            }
+        ],
+        "dataset": {
+            "name": "CacheDataset",
+            "data_list_file_path": "{DATASET_JSON}",
+            "data_file_base_dir": "{DATA_ROOT}",
+            "data_list_key": "{VAL_DATALIST_KEY}",
+            "args": {
+                "transform": "@pre_transforms",
+                "cache_rate": 1,
+                "num_workers": 4
+            }
+        },
+        "dataloader": {
+            "name": "DataLoader",
+            "args": {
+                "dataset": "@dataset",
+                "batch_size": 1,
+                "shuffle": false,
+                "num_workers": 4
+            }
+        },
+        "inferer": {
+            "name": "SlidingWindowInferer",
+            "args": {
+                "roi_size": [
+                    "{roi_x}",
+                    "{roi_y}",
+                    "{roi_z}"
+                ],
+                "sw_batch_size": 4,
+                "overlap": 0.625,
+                "sw_device": "cuda"
+            }
+        },
+        "handlers": [
+            {
+                "name": "StatsHandler",
+                "rank": 0,
+                "args": {
+                    "output_transform": "lambda x: None"
+                }
+            },
+            {
+                "name": "TensorBoardStatsHandler",
+                "rank": 0,
+                "args": {
+                    "log_dir": "{MMAR_CKPT_DIR}",
+                    "output_transform": "lambda x: None"
+                }
+            },
+            {
+                "name": "CheckpointSaver",
+                "rank": 0,
+                "args": {
+                    "save_dir": "{MMAR_CKPT_DIR}",
+                    "save_dict": {
+                        "model": "@model",
+                        "train_conf": "@conf"
+                    },
+                    "save_key_metric": true
+                }
+            }
+        ],
+        "post_transforms": [
+            {
+                "ref": "Activationsd"
+            },
+            {
+                "ref": "AsDiscreted"
+            }
+        ],
+        "key_metric": {
+            "name": "MeanDice",
+            "log_label": "val_mean_dice",
+            "args": {
+                "include_background": false,
+                "output_transform": "#monai.handlers.from_engine(['pred', 'label'])"
+            }
+        },
+        "additional_metrics": [
+            {
+                "name": "Accuracy",
+                "log_label": "val_acc",
+                "args": {
+                    "output_transform": "#monai.handlers.from_engine(['pred', 'label'])"
+                }
+            }
+        ],
+        "evaluator": {
+            "name": "SupervisedEvaluator",
+            "args": {
+                "device": "cpu",
+                "val_data_loader": "@dataloader",
+                "network": "@model",
+                "inferer": "@inferer",
+                "postprocessing": "@post_transforms",
+                "key_val_metric": "@key_metric",
+                "additional_metrics": "@additional_metrics",
+                "val_handlers": "@handlers",
+                "amp": "{amp}"
+            }
+        }
+    }
+}
