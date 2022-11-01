@@ -2,7 +2,7 @@
 This training and inference pipeline was developed by NVIDIA. It is based on a segmentation model developed by NVIDIA researchers in conjunction with the NIH. 
 
 # Model Overview
-A pre-trained model for volumetric (3D) segmentation of bone lesions from CT images.
+A pre-trained model for volumetric (3D) segmentation of bone lesions from CT images. Models were trained in MONAI framework and packaged in Clara Train sdk Medical Model Archive (MMAR) for distribution.
 
 ## Workflow
 The model is trained using a 3D SegResNet network [1]. 
